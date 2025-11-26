@@ -40,6 +40,12 @@ The script identified the following subcategories with the highest Standard Devi
 GV.OC-03 (Organizational Culture): High variance suggests leadership is not aligned on the definition of security culture.
 DE.AE-01 (Anomalies Detected): Disagreement here often stems from visibility gaps—some managers may not be aware of specific monitoring tools.
 
+### Deep Dive: Category Analysis
+
+The tool also generates correlation matrices for individual NIST Categories (e.g., GV.OC, PR.DS).
+
+**Why this matters:** Global metrics often hide specific operational disagreements. For example, managers might align on Governance overall, but have negative correlation specifically on Supply Chain Risk Management (GV.SC), indicating a specific area where policy definitions are unclear.
+
 ## How to Read These Results
 
 If you are using this tool for your own organization, use this guide to interpret your correlation coefficients (ρ):
