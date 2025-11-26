@@ -20,37 +20,82 @@ def analyze_nist_ratings(file_path):
     df['agreement_std'] = df[manager_cols].std(axis=1)
     df['agreement_range'] = df[manager_cols].max(axis=1) - df[manager_cols].min(axis=1)
     
-    print("\n--- Top 5 Subcategories with Highest Disagreement (Std Dev) ---")
-    print(df.sort_values(by='agreement_std', ascending=False)[['Category', 'Subcategory', 'agreement_std']].head(5))
+    # To print ALL rows without truncation:
+    pd.set_option('display.max_rows', None)
+
+    # Filter for significant disagreement (e.g., std > 1.0)
+    # If you want absolutely ALL, just remove the [df['agreement_std'] > 1.0] filter
+    high_disagreement = df[df['agreement_std'] > 1.0]
+
+    print(f"\n--- Subcategories with High Disagreement (Std Dev > 1.0) [Count: {len(high_disagreement)}] ---")
+    print(high_disagreement.sort_values(by='agreement_std', ascending=False)[['Category', 'Subcategory', 'agreement_std']])
 
     # --- LEVEL 2: Global Correlation ---
     # Correlation between managers across the ENTIRE dataset
     global_corr = df[manager_cols].corr(method='spearman')
     
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(6, 6))
     sns.heatmap(global_corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1)
     plt.title("Global Inter-Rater Correlation (Spearman)")
-    plt.show()
+    # plt.show() # Deferred to end
 
-    # --- LEVEL 3: Category-Specific Correlation ---
-    # Correlation between managers per Category (e.g., Identify, Protect)
-    categories = df['Category'].unique()
+    # --- LEVEL 3: Function & Category Analysis ---
+    # Generate one figure per FUNCTION, with subplots for each CATEGORY
     
-    for cat in categories:
-        subset = df[df['Category'] == cat]
-        if len(subset) > 2: # Need at least 2 data points to correlate
-            cat_corr = subset[manager_cols].corr(method='spearman')
+    import math
+    
+    # Get unique functions
+    functions = df['Function'].unique()
+    
+    for func in functions:
+        # Filter data for this function
+        func_data = df[df['Function'] == func]
+        categories = func_data['Category'].unique()
+        
+        num_cats = len(categories)
+        if num_cats == 0:
+            continue
             
-            # We can print the average correlation for this category to summarize
-            # (Excluding the diagonal 1.0s)
-            avg_corr = (cat_corr.sum().sum() - len(cat_corr)) / (len(cat_corr)**2 - len(cat_corr))
-            
-            print(f"\nCategory: {cat} (n={len(subset)})")
-            print(f"Average Inter-Manager Correlation: {avg_corr:.3f}")
-            # Optional: Plot heatmap for each category
-            # sns.heatmap(cat_corr, ...) 
+        # Determine grid size for subplots
+        cols = 3 if num_cats > 1 else 1
+        rows = math.ceil(num_cats / cols)
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(6 * cols, 6 * rows))
+        fig.suptitle(f"Inter-Rater Correlation: {func} Function", fontsize=12)
+        
+        # Flatten axes array for easy iteration if multiple subplots
+        if num_cats > 1:
+            axes = axes.flatten()
         else:
-            print(f"\nCategory: {cat} - Not enough data points for correlation.")
+            axes = [axes]
+            
+        for i, cat in enumerate(categories):
+            ax = axes[i]
+            subset = func_data[func_data['Category'] == cat]
+            
+            if len(subset) > 2:
+                cat_corr = subset[manager_cols].corr(method='spearman')
+                
+                # Calculate average correlation (off-diagonal)
+                n = len(cat_corr)
+                if n > 1:
+                    avg_corr = (cat_corr.sum().sum() - n) / (n**2 - n)
+                else:
+                    avg_corr = 0
+                
+                sns.heatmap(cat_corr, annot=True, cmap='coolwarm', vmin=-1, vmax=1, ax=ax)
+                ax.set_title(f"{cat} (Avg Corr: {avg_corr:.2f})")
+            else:
+                ax.text(0.5, 0.5, "Not enough data", ha='center', va='center')
+                ax.set_title(f"{cat}")
+        
+        # Hide unused subplots
+        for j in range(i + 1, len(axes)):
+            axes[j].axis('off')
+            
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust for suptitle
+        
+    plt.show()
 
 if __name__ == "__main__":
     # Example
