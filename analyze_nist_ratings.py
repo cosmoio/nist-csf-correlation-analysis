@@ -103,11 +103,13 @@ def analyze_nist_ratings(file_path):
                 ax.text(0.5, 0.5, "Not enough data", ha='center', va='center')
                 ax.set_title(f"{cat}")
         
-        # Hide unused subplots
+        # Clean up the figure by hiding any empty subplot slots
+        # (e.g., if we have a 2x3 grid but only 5 categories, hide the 6th slot)
         for j in range(i + 1, len(axes)):
             axes[j].axis('off')
             
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust for suptitle
+        # Adjust layout to prevent overlap, leaving top space (0.95) for the main title
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         
     plt.show()
 
